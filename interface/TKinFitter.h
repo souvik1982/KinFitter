@@ -94,7 +94,7 @@ protected:
   void countUnmeasParams();
   void resetParams();
 
-  void printMatrix(const TMatrixD &matrix, const TString name = "");
+  void printMatrix(const TMatrixD &matrix, const TString& name = "");
 
 private :
 
@@ -151,4 +151,3 @@ private :
 };
 
 #endif
-

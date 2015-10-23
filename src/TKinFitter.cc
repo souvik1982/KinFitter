@@ -349,6 +349,7 @@ Int_t TKinFitter::fit() {
     calcC31();
     calcC33();
     calcC();
+
     // Calculate corretion for a, y, and lambda
     if ( _nParA > 0 ){
       calcDeltaA();
@@ -377,6 +378,7 @@ Int_t TKinFitter::fit() {
       applyDeltaA();
     }
     applyDeltaY();
+
     _nbIter++;
     
     //calculate F and S
@@ -418,6 +420,7 @@ Int_t TKinFitter::fit() {
   // Calculate covariance matrices
   calcB();
   calcVB();
+  
   if ( _nParA > 0 ) {
     calcA();
     calcVA();
@@ -425,15 +428,15 @@ Int_t TKinFitter::fit() {
     calcC22();
     calcC32();
   }
-
   calcC11();
   calcC31();
   calcC33();
   calcVFit();
   applyVFit();
+  
   // Set status information
   if (isConverged) {
-	    _status = 0;
+    _status = 0;
   }
   else if (_status != -10) {
     _status = 1;
@@ -443,6 +446,7 @@ Int_t TKinFitter::fit() {
   if ( _verbosity >= 1 ) {
     print();
   }
+
   return _status;
 
 }
@@ -462,17 +466,21 @@ void TKinFitter::setCovMatrix( TMatrixD &V ) {
 
 Bool_t TKinFitter::calcV() {
   // Combines the covariance matrices of all measured particles
-  _V.ResizeTo( int(_nParB/3), int (_nParB/3) );
+
+  _V.ResizeTo( _nParB, _nParB );
   _V.Zero();
 
   Int_t offsetP = 0;
   for (unsigned int iP = 0; iP < _measParticles.size(); iP++) {
     TAbsFitParticle* particle = _measParticles[iP];
-    Int_t nParP = int(particle->getNPar()/3);
+    Int_t nParP = particle->getNPar();
     const TMatrixD* covMatrix =  particle->getCovMatrix();
+
     for (int iX = offsetP; iX < offsetP + nParP; iX++) {
       for (int iY = offsetP; iY < offsetP + nParP; iY++) {
+
 	_V(iX, iY) = (*covMatrix)(iX-offsetP, iY-offsetP);
+
       }
     }
 
@@ -483,56 +491,12 @@ Bool_t TKinFitter::calcV() {
     TAbsFitConstraint* constraint = _constraints[iC];
     Int_t nParP = constraint->getNPar();
     const TMatrixD* covMatrix =  constraint->getCovMatrix();
+
     for (int iX = offsetP; iX < offsetP + nParP; iX++) {
       for (int iY = offsetP; iY < offsetP + nParP; iY++) {
 
 	_V(iX, iY) = (*covMatrix)(iX-offsetP, iY-offsetP);
-      }
-    }
 
-    offsetP += nParP;
-  }
-
-  _Vinv.ResizeTo( _V );
-  _Vinv = _V;
-  try {
-    _Vinv.Invert();
-  } catch (cms::Exception& e) {
-    edm::LogInfo ("KinFitter") << "Failed to invert covariance matrix V. Fit will be aborted.";
-    _status = -10;
-  }
-  return true;
-
-}
-
-/*
-Bool_t TKinFitter::calcV() {
-  // Combines the covariance matrices of all measured particles
-  _V.ResizeTo( int(_nParB), int (_nParB) );
-  _V.Zero();
-
-  Int_t offsetP = 0;
-  for (unsigned int iP = 0; iP < _measParticles.size(); iP++) {
-    TAbsFitParticle* particle = _measParticles[iP];
-    Int_t nParP = int(particle->getNPar());
-    const TMatrixD* covMatrix =  particle->getCovMatrix();
-    for (int iX = offsetP; iX < offsetP + nParP; iX++) {
-      for (int iY = offsetP; iY < offsetP + nParP; iY++) {
-        _V(iX, iY) = (*covMatrix)(iX-offsetP, iY-offsetP);
-      }
-    }
-
-    offsetP += nParP;
-  }
-
-  for (unsigned int iC = 0; iC < _constraints.size(); iC++) {
-    TAbsFitConstraint* constraint = _constraints[iC];
-    Int_t nParP = constraint->getNPar();
-    const TMatrixD* covMatrix =  constraint->getCovMatrix();
-    for (int iX = offsetP; iX < offsetP + nParP; iX++) {
-      for (int iY = offsetP; iY < offsetP + nParP; iY++) {
-
-        _V(iX, iY) = (*covMatrix)(iX-offsetP, iY-offsetP);
       }
     }
 
@@ -551,8 +515,6 @@ Bool_t TKinFitter::calcV() {
   return true;
 
 }
-
-*/
 
 Bool_t TKinFitter::calcA() {
   // Calculate the Jacobi matrix of unmeasured parameters df_i/da_i
@@ -597,20 +559,20 @@ Bool_t TKinFitter::calcB() {
   // Calculate the Jacobi matrix of measured parameters df_i/da_i
   // Row i contains the derivatives of constraint f_i. Column q contains
   // the derivative wrt. a_q.
-  _B.ResizeTo( _constraints.size(), int(_nParB/3) );
+
+  _B.ResizeTo( _constraints.size(), _nParB );
+
   int offsetParam = 0;
   for (unsigned int indexConstr = 0; indexConstr < _constraints.size(); indexConstr++) {
+
     offsetParam = 0;
     for (unsigned int indexParticle = 0; indexParticle < _measParticles.size(); indexParticle++) {
-	
+
       // Calculate matrix product  df/dP * dP/dy = (df/dr, df/dtheta, df/dphi, ...)
       TAbsFitParticle* particle = _measParticles[indexParticle];
       TMatrixD* derivParticle = particle->getDerivative();
-      derivParticle->ResizeTo(4,1);//_constraints.size() ); //resize in order to keep only the derivative in pt ...  checked for nconstraint > 1!
       TMatrixD* derivConstr = _constraints[indexConstr]->getDerivative( particle );
-
-      TMatrixD deriv( *derivConstr,  TMatrixD::kMult, *derivParticle ); // 1x1 matrix
-    
+      TMatrixD deriv( *derivConstr,  TMatrixD::kMult, *derivParticle );
       if (_verbosity >= 3) {
 	TString matrixName = "B deriv: Particle -> ";
 	matrixName += particle->GetName();
@@ -621,11 +583,10 @@ Bool_t TKinFitter::calcB() {
 	matrixName += particle->GetName();
 	printMatrix( *derivConstr, matrixName );
       }	
-  
       for (int indexParam = 0; indexParam < deriv.GetNcols(); indexParam++) {
 	_B(indexConstr,indexParam+offsetParam) = deriv(0, indexParam);
-	}
-	offsetParam += deriv.GetNcols();
+      }
+      offsetParam += deriv.GetNcols();
 
       delete derivParticle;
       delete derivConstr;
@@ -657,12 +618,14 @@ Bool_t TKinFitter::calcB() {
   TMatrixD BT( TMatrixD::kTransposed,  _B );
   _BT.ResizeTo( BT );
   _BT = BT;
+
   return true;
 
 }
 
 Bool_t TKinFitter::calcVB() {
   // Calculate the matrix V_B = (B*V*B^T)^-1
+
   TMatrixD BV( _B, TMatrixD::kMult, _V );
   TMatrixD VBinv( BV, TMatrixD::kMult, _BT );
   _VBinv.ResizeTo( VBinv );
@@ -676,6 +639,7 @@ Bool_t TKinFitter::calcVB() {
     edm::LogInfo ("KinFitter") << "Failed to invert matrix VB. Fit will be aborted.";
     _status = -10;
   }
+
   return true;
 
 }
@@ -696,6 +660,7 @@ Bool_t TKinFitter::calcVA() {
     edm::LogInfo ("KinFitter") << "Failed to invert matrix VA. Fit will be aborted.";
     _status = -10;
   }
+
   return true;
 
 }
@@ -832,6 +797,7 @@ Bool_t TKinFitter::calcC() {
   // Calculate the matrix c = A*deltaAStar + B*deltaYStar - fStar
 
   int offsetParam = 0;
+
   // calculate delta(a*), = 0 in the first iteration
   TMatrixD deltaastar( 1, 1 );
   if ( _nParA > 0 ) {
@@ -857,8 +823,9 @@ Bool_t TKinFitter::calcC() {
     }
 
   }
+
   // calculate delta(y*), = 0 in the first iteration
-  TMatrixD deltaystar( int(_nParB/3), 1 );
+  TMatrixD deltaystar( _nParB, 1 );
   offsetParam = 0;
   for (unsigned int indexParticle = 0; indexParticle < _measParticles.size(); indexParticle++) {
 
@@ -867,11 +834,12 @@ Bool_t TKinFitter::calcC() {
     const TMatrixD* y = particle->getParIni();
     TMatrixD deltaystarpart(*ystar);
     deltaystarpart -= *y;
-    deltaystarpart.ResizeTo(1,1);
+
     for (int indexParam = 0; indexParam < deltaystarpart.GetNrows(); indexParam++) {
       deltaystar(indexParam+offsetParam, 0) = deltaystarpart(indexParam, 0);
     }
     offsetParam += deltaystarpart.GetNrows();
+
   } 
 
   for (unsigned int iC = 0; iC < _constraints.size(); iC++) {
@@ -915,7 +883,6 @@ Bool_t TKinFitter::calcC() {
     _c += Adeltaastar;
   }
 
-
   return true;
 
 }
@@ -942,6 +909,7 @@ Bool_t TKinFitter::calcDeltaA() {
 Bool_t TKinFitter::calcDeltaY() {
   // Calculate the matrix deltaY = C31T * c 
   // (corrections to measured parameters)
+
   TMatrixD deltaY( _C31T, TMatrixD::kMult, _c );
   _deltaY.ResizeTo( deltaY );
 
@@ -952,6 +920,7 @@ Bool_t TKinFitter::calcDeltaY() {
     _deltaYstar = _deltaY;
 
   _deltaY = deltaY;
+
   return true;
 
 }
@@ -959,6 +928,7 @@ Bool_t TKinFitter::calcDeltaY() {
 Bool_t TKinFitter::calcLambda() {
   // Calculate the matrix Lambda = C33 * c 
   // (Lagrange Multipliers)
+
   TMatrixD lambda( _C33,  TMatrixD::kMult, _c );
   _lambda.ResizeTo( lambda );
   _lambda = lambda;
@@ -966,6 +936,7 @@ Bool_t TKinFitter::calcLambda() {
   TMatrixD lambdaT( TMatrixD::kTransposed,  _lambda );
   _lambdaT.ResizeTo( lambdaT );
   _lambdaT = lambdaT;
+
   return true;
 
 }
@@ -1019,33 +990,19 @@ Bool_t TKinFitter::calcVFit() {
 
 void TKinFitter::applyVFit() {
   // apply fit covariance matrix to measured and unmeasured  particles
- Int_t offsetP = 0;
- int offsetParam = 0;
+
+  int offsetParam = 0;
   for (unsigned int indexParticle = 0; indexParticle < _measParticles.size(); indexParticle++) {
     TAbsFitParticle* particle = _measParticles[indexParticle];
-    Int_t nbParams = int(particle->getNPar()/3);
-    Int_t nParP = int(particle->getNPar());	
-     const TMatrixD* covMatrix =  particle->getCovMatrix(); 
+    Int_t nbParams = particle->getNPar();
     TMatrixD vfit( nbParams, nbParams );
-    TMatrixD vfit_c(nParP, nParP );	
     for (Int_t c = 0; c < nbParams; c++) {
       for (Int_t r = 0; r < nbParams; r++) {
 	vfit(r, c) = _yaVFit(r + offsetParam, c + offsetParam);
-		}
-	}
- for (int iX = 0; iX <  nParP; iX++) {
-      for (int iY = 0; iY < nParP; iY++) {
-	
-	if(iX<nbParams && iY <nbParams) {vfit_c(iX, iY) = vfit( 0,0); }//std::cout<<"iX + offsetParam "<<iX + offsetParam<<"  iY + offsetParam "<<iY + offsetParam<<std::endl; }
-	 { vfit_c(iX,iY) = (*covMatrix)(iX, iY);  //std::cout<<"iX-offsetP "<< iX<<" iX-offsetP " <<iY<<" offsetP "<<offsetP<<std::endl;
-}
       }
     }
-
-
-   particle->setCovMatrixFit( &vfit_c );
-   offsetP += nParP;
-   offsetParam += nbParams;
+    particle->setCovMatrixFit( &vfit );
+    offsetParam += nbParams;
   }
 
   for (unsigned int indexConstraint = 0; indexConstraint < _constraints.size(); indexConstraint++) {
@@ -1101,20 +1058,21 @@ Bool_t TKinFitter::applyDeltaA() {
 
 Bool_t TKinFitter::applyDeltaY() {
   //apply corrections to measured particles
+
   int offsetParam = 0;
   for (unsigned int indexParticle = 0; indexParticle < _measParticles.size(); indexParticle++) {
 
     TAbsFitParticle* particle = _measParticles[indexParticle];
-    Int_t nbParams = particle->getNPar()/3;
-    TMatrixD params( int(nbParams), 1 );
+    Int_t nbParams = particle->getNPar();
+    TMatrixD params( nbParams, 1 );
     for (Int_t index = 0; index < nbParams; index++) {
       params(index, 0) = _deltaY(index+offsetParam, 0);
     }
-    params.ResizeTo(particle->getNPar(),1);	
     particle->applycorr( &params );
     offsetParam+=nbParams;
 
   }
+
   for (unsigned int indexConstraint = 0; indexConstraint < _constraints.size(); indexConstraint++) {
 
     TAbsFitConstraint* constraint = _constraints[indexConstraint];
@@ -1129,6 +1087,7 @@ Bool_t TKinFitter::applyDeltaY() {
     }
 
   }
+
   return true;
 
 }
@@ -1225,7 +1184,7 @@ void TKinFitter::print() {
   Int_t parIndex = 0;
   for (unsigned int iP = 0; iP < _measParticles.size(); iP++) {
     TAbsFitParticle* particle = _measParticles[iP];
-    Int_t nParP = int(particle->getNPar()/3);
+    Int_t nParP = particle->getNPar();
     const TMatrixD* par = particle->getParCurr();
     const TMatrixD* covP = particle->getCovMatrix();
     log << std::setw(3) << setiosflags(std::ios::right) << iP;
@@ -1294,7 +1253,7 @@ void TKinFitter::print() {
 
 }
 
-void TKinFitter::printMatrix(const TMatrixD &matrix, const TString name) {
+void TKinFitter::printMatrix(const TMatrixD &matrix, const TString& name) {
   // produce a tabular printout for matrices
   // this function is a modified version of Root's TMatrixTBase<Element>::Print method
   // which could not be used together with the MessageLogger
