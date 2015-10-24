@@ -78,7 +78,7 @@ TFitParticleEt::~TFitParticleEt() {
 //--------------
 void TFitParticleEt::init(TLorentzVector* pini, const TMatrixD* theCovMatrix ) {
 
-  _nPar = 3;
+  _nPar = 1;
   setIni4Vec(pini);
   setCovMatrix(theCovMatrix);
 
@@ -99,13 +99,11 @@ TLorentzVector* TFitParticleEt::calc4Vec( const TMatrixD* params ) {
   }
 
   Double_t et = (*params)(0,0);
-  Double_t eta = (*params)(1,0);
-  Double_t phi = (*params)(2,0);
-
-  Double_t X = et*TMath::Cos(phi);
-  Double_t Y = et*TMath::Sin(phi);
-  Double_t Z = et*TMath::SinH(eta);
-  Double_t E = et*TMath::CosH(eta);
+  
+  Double_t X = et*TMath::Cos(_phi);
+  Double_t Y = et*TMath::Sin(_phi);
+  Double_t Z = et*TMath::SinH(_eta);
+  Double_t E = et*TMath::CosH(_eta);
 		
   TLorentzVector* vec = new TLorentzVector( X, Y, Z, E );
   return vec;
@@ -126,13 +124,12 @@ void TFitParticleEt::setIni4Vec(const TLorentzVector* pini) {
 
     _iniparameters.ResizeTo(_nPar,1);
     _iniparameters(0,0) = 0.;
-    _iniparameters(1,0) = 0.;
-    _iniparameters(2,0) = 0.;
     
     _parameters.ResizeTo(_nPar,1);
     _parameters(0,0) = 0.;
-    _parameters(1,0) = 0.;
-    _parameters(2,0) = 0.;   
+    
+    _eta=0;
+    _phi=0;
     
   } else {
     
@@ -145,8 +142,8 @@ void TFitParticleEt::setIni4Vec(const TLorentzVector* pini) {
     
     _iniparameters.ResizeTo(_nPar,1);
     _iniparameters(0,0) = et;
-    _iniparameters(1,0) = eta;
-    _iniparameters(2,0) = phi;
+    _eta=eta;
+    _phi=phi;
     
     _parameters.ResizeTo(_nPar,1);
     _parameters = _iniparameters;
@@ -167,15 +164,11 @@ TMatrixD* TFitParticleEt::getDerivative() {
   TMatrixD* DerivativeMatrix = new TMatrixD(4,1);
   (*DerivativeMatrix) *= 0.;
 
-  // Double_t et = _parameters(0,0);
-  Double_t eta = _parameters(1,0);
-  Double_t phi = _parameters(2,0);
-
   //1st column: dP/d(et)
-  (*DerivativeMatrix)(0,0) = TMath::Cos(phi);
-  (*DerivativeMatrix)(1,0) = TMath::Sin(phi);
-  (*DerivativeMatrix)(2,0) = TMath::SinH(eta);
-  (*DerivativeMatrix)(3,0) = TMath::CosH(eta);
+  (*DerivativeMatrix)(0,0) = TMath::Cos(_phi);
+  (*DerivativeMatrix)(1,0) = TMath::Sin(_phi);
+  (*DerivativeMatrix)(2,0) = TMath::SinH(_eta);
+  (*DerivativeMatrix)(3,0) = TMath::CosH(_eta);
 
   return DerivativeMatrix;
 
@@ -188,8 +181,6 @@ TMatrixD* TFitParticleEt::transform(const TLorentzVector& vec) {
   // retrieve parameters
   TMatrixD* tparams = new TMatrixD( _nPar, 1 );
   (*tparams)(0,0) = vec.E()*std::fabs(sin(vec.Theta()));
-  (*tparams)(1,0) = vec.Eta();
-  (*tparams)(2,0) = vec.Phi();
 
   return tparams;
 

@@ -93,13 +93,13 @@ void testKinFitFWLite()
   TLorentzVector v2( 15.41, 28.78,   6.06,  34.08);
   TLorentzVector v3(-99.57, 92.41,   2.54, 136.23);
 
-  TMatrixD m1(3,3);
+  /*TMatrixD m1(3,3);
   TMatrixD m2(3,3);
-  TMatrixD m3(3,3);
+  TMatrixD m3(3,3);*/
   
-  /*TMatrixD m1(1,1);
+  TMatrixD m1(1,1);
   TMatrixD m2(1,1);
-  TMatrixD m3(1,1);*/
+  TMatrixD m3(1,1);
   m1.Zero();
   m2.Zero();
   m3.Zero();
@@ -136,7 +136,7 @@ void testKinFitFWLite()
   fitter->setMaxNbIter( 30 );
   fitter->setMaxDeltaS( 1e-2 );
   fitter->setMaxF( 1e-1 );
-  fitter->setVerbosity(1);
+  fitter->setVerbosity(3);
 
   //Perform the fit
   std::cout << "Performing kinematic fit..." << std::endl;

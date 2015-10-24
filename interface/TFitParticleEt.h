@@ -33,7 +33,9 @@ protected :
   void init(TLorentzVector* pini, const TMatrixD* theCovMatrix);
   
   
-  private:
+private:
+
+  double _eta, _phi;
     
 };
   

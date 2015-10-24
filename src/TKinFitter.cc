@@ -314,7 +314,7 @@ Int_t TKinFitter::fit() {
 
   resetParams();
   resetStatus();
-
+  
   _nbIter = 0;
   Bool_t isConverged = false;
   Double_t prevF;
@@ -324,7 +324,7 @@ Int_t TKinFitter::fit() {
 
   // Calculate covariance matrix V
   calcV();
-
+  
   // print status
   if ( _verbosity >= 1 ) {
     print();
@@ -349,14 +349,14 @@ Int_t TKinFitter::fit() {
     calcC31();
     calcC33();
     calcC();
-
+    
     // Calculate corretion for a, y, and lambda
     if ( _nParA > 0 ){
       calcDeltaA();
     }
     calcDeltaY();
     calcLambda();
-   
+    
     if( _verbosity >= 3 ) {
       printMatrix( _A      , "A"      );
       printMatrix( _B      , "B"      );
@@ -378,7 +378,7 @@ Int_t TKinFitter::fit() {
       applyDeltaA();
     }
     applyDeltaY();
-
+    
     _nbIter++;
     
     //calculate F and S
@@ -466,7 +466,6 @@ void TKinFitter::setCovMatrix( TMatrixD &V ) {
 
 Bool_t TKinFitter::calcV() {
   // Combines the covariance matrices of all measured particles
-
   _V.ResizeTo( _nParB, _nParB );
   _V.Zero();
 
@@ -475,7 +474,7 @@ Bool_t TKinFitter::calcV() {
     TAbsFitParticle* particle = _measParticles[iP];
     Int_t nParP = particle->getNPar();
     const TMatrixD* covMatrix =  particle->getCovMatrix();
-
+    
     for (int iX = offsetP; iX < offsetP + nParP; iX++) {
       for (int iY = offsetP; iY < offsetP + nParP; iY++) {
 
@@ -573,15 +572,17 @@ Bool_t TKinFitter::calcB() {
       TMatrixD* derivParticle = particle->getDerivative();
       TMatrixD* derivConstr = _constraints[indexConstr]->getDerivative( particle );
       TMatrixD deriv( *derivConstr,  TMatrixD::kMult, *derivParticle );
-      if (_verbosity >= 3) {
-	TString matrixName = "B deriv: Particle -> ";
-	matrixName += particle->GetName();
-	printMatrix( *derivParticle, matrixName );
-	matrixName = "B deriv: Constraint -> ";
-	matrixName += _constraints[indexConstr]->GetName();
-	matrixName += " , Particle -> ";
-	matrixName += particle->GetName();
-	printMatrix( *derivConstr, matrixName );
+      
+      if (_verbosity >= 3) 
+      {
+        TString matrixName = "B deriv: Particle -> ";
+        matrixName += particle->GetName();
+        printMatrix( *derivParticle, matrixName );
+        matrixName = "B deriv: Constraint -> ";
+        matrixName += _constraints[indexConstr]->GetName();
+        matrixName += " , Particle -> ";
+        matrixName += particle->GetName();
+        printMatrix( *derivConstr, matrixName );
       }	
       for (int indexParam = 0; indexParam < deriv.GetNcols(); indexParam++) {
 	_B(indexConstr,indexParam+offsetParam) = deriv(0, indexParam);
@@ -593,7 +594,7 @@ Bool_t TKinFitter::calcB() {
 
     }
   }
-
+  
   for (unsigned int iC = 0; iC < _constraints.size(); iC++) {
 
     TAbsFitConstraint* constraint = _constraints[iC];
